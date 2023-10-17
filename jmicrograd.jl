@@ -5,29 +5,48 @@ import Base.:/
 import Base.print
 
 
-# Class
+#########
+# Class #
+#########
 mutable struct Value
   data::Float64
   op::String
   prev::Vector{Value}
   grad::Float64
   _backward
+  name::String
 end
 
 
-# Constructor
+###############
+# Constructor #
+###############
 function newValue(
   data = 0,
   op = "",
   prev = [],
   grad = 0,
-  _backward = ()->nothing
+  _backward = ()->nothing;
+  name = ""
 )
-  Value(data, op, prev, grad, _backward)
+  Value(data, op, prev, grad, _backward, name)
 end
 
 
-# Print
+##########################################################
+# Macro to construct instance with same name as variable #
+##########################################################
+macro nv(name, data)
+  thisname = string(name)
+  return quote
+    global $name = newValue($data, name = $thisname)
+  end
+end
+
+
+#########
+# Print #
+#########
 function print(v::Value)
   print(print_helper(v))
 end
@@ -53,7 +72,9 @@ function print_helper(v::Value, indent = "")
 end
 
 
-# Clear gradients in this node
+################################
+# Clear gradients in this node #
+################################
 function clear_grads!(v::Value)
   v.grad = 0
   for vv in v.prev
@@ -62,12 +83,16 @@ function clear_grads!(v::Value)
 end
 
 
-# Globals used by build_topo
+##############################
+# Globals used by build_topo #
+##############################
 topo = []
 visited = Set()
 
 
-# Topologically sort the expression graph, storing the list in global topo
+############################################################################
+# Topologically sort the expression graph, storing the list in global topo #
+############################################################################
 function build_topo(v::Value)
   if !(v in visited)
     push!(visited, v)
@@ -79,7 +104,9 @@ function build_topo(v::Value)
 end
 
 
-# Backward pass starting at node v
+####################################
+# Backward pass starting at node v #
+####################################
 function backward(v::Value)
   clear_grads!(v)
   # topological order all of the children in the graph
@@ -93,7 +120,9 @@ function backward(v::Value)
 end
 
 
-# Add
+#######
+# Add #
+#######
 function +(a::Value, b::Value)
   out = newValue(a.data + b.data, "+", [a, b])
   out._backward = function()
@@ -112,7 +141,9 @@ function +(a::Number, b::Value)
 end
 
 
-# Mult
+########
+# Mult #
+########
 function *(a::Value, b::Value)
   out = newValue(a.data * b.data, "*", [a, b])
   out._backward = function()
@@ -131,7 +162,9 @@ function +(a::Number, b::Value)
 end
 
 
-# Sub
+#######
+# Sub #
+#######
 function -(a::Value, b::Value)
   a + (-1)*b
 end
@@ -145,13 +178,17 @@ function -(a::Number, b::Value)
 end
 
 
-# Negation
+############
+# Negation #
+############
 function -(a::Value)
   -1 * a
 end
 
 
-# Power
+#########
+# Power #
+#########
 function ^(a::Value, b::Number)
   out = newValue(a.data^b, "^"*b, [a])
   out._backward = function()
@@ -161,7 +198,9 @@ function ^(a::Value, b::Number)
 end
 
 
-# Division
+############
+# Division #
+############
 function /(a::Value, b::Value)
   a * b^1
 end
@@ -175,7 +214,9 @@ function /(a::Number, b::Value)
 end
 
 
-# ReLU
+########
+# ReLU #
+########
 function relu(a::Value)
   out = newValue(max(0, a.data), "ReLU", [a])
   out._backward = function()
@@ -187,3 +228,4 @@ end
 function relu(a::Number)
   relu(newValue(a))
 end
+
