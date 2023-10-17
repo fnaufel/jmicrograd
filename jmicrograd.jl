@@ -16,7 +16,13 @@ end
 
 
 # Constructor
-function newValue(data = 0, op = "", prev = [], grad = 0, _backward = nothing)
+function newValue(
+  data = 0,
+  op = "",
+  prev = [],
+  grad = 0,
+  _backward = ()->nothing
+)
   Value(data, op, prev, grad, _backward)
 end
 
@@ -47,11 +53,42 @@ function print_helper(v::Value, indent = "")
 end
 
 
-# Clear gradients in this node and its previous nodes
-function clear_grads(v::Value)
+# Clear gradients in this node
+function clear_grads!(v::Value)
   v.grad = 0
   for vv in v.prev
-    clear_grads(vv)
+    clear_grads!(vv)
+  end
+end
+
+
+# Globals used by build_topo
+topo = []
+visited = Set()
+
+
+# Topologically sort the expression graph, storing the list in global topo
+function build_topo(v::Value)
+  if !(v in visited)
+    push!(visited, v)
+    for child in v.prev
+      build_topo(child)
+    end
+    push!(topo, v)
+  end
+end
+
+
+# Backward pass starting at node v
+function backward(v::Value)
+  clear_grads!(v)
+  # topological order all of the children in the graph
+  global topo = []
+  global visited = Set()
+  build_topo(v)
+  v.grad = 1
+  for node in reverse(topo)
+    node._backward()
   end
 end
 
@@ -79,8 +116,8 @@ end
 function *(a::Value, b::Value)
   out = newValue(a.data * b.data, "*", [a, b])
   out._backward = function()
-    a.grad += b.grad * out.grad
-    b.grad += a.grad * out.grad
+    a.grad += b.data * out.grad
+    b.grad += a.data * out.grad
   end
   out
 end
