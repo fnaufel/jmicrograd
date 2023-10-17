@@ -4,13 +4,13 @@ import Base.:-
 import Base.:/
 import Base.print
 
+using GraphvizDotLang: digraph, edge, node, save, attr
 
 #########
 # Class #
 #########
 mutable struct Value
   data::Float64
-  op::String
   prev::Vector{Value}
   grad::Float64
   _backward
@@ -23,13 +23,12 @@ end
 ###############
 function newValue(
   data = 0,
-  op = "",
   prev = [],
   grad = 0,
   _backward = ()->nothing;
   name = ""
 )
-  Value(data, op, prev, grad, _backward, name)
+  Value(data, prev, grad, _backward, name)
 end
 
 
@@ -39,7 +38,7 @@ end
 macro nv(name, data)
   thisname = string(name)
   return quote
-    global $name = newValue($data, name = $thisname)
+    $(esc(name)) = newValue($data; name = $thisname)
   end
 end
 
@@ -55,9 +54,9 @@ function print_helper(v::Value, indent = "")
   # This node's fields
   s =
     indent * " |\\------------\n" *
+    indent * " |  name: " * v.name * "\n" *
     indent * " |  data: " * string(v.data) * "\n" *
-    indent * " |  grad: " * string(v.grad) * "\n" * 
-    indent * " |  op:   " * v.op * "\n"
+    indent * " |  grad: " * string(v.grad) * "\n"
   # Previous nodes
   s2 = ""
   if length(v.prev) > 0 
@@ -124,7 +123,7 @@ end
 # Add #
 #######
 function +(a::Value, b::Value)
-  out = newValue(a.data + b.data, "+", [a, b])
+  out = newValue(a.data + b.data, [a, b]; name = "+")
   out._backward = function()
     a.grad += out.grad
     b.grad += out.grad
@@ -145,7 +144,7 @@ end
 # Mult #
 ########
 function *(a::Value, b::Value)
-  out = newValue(a.data * b.data, "*", [a, b])
+  out = newValue(a.data * b.data, [a, b]; name = "*")
   out._backward = function()
     a.grad += b.data * out.grad
     b.grad += a.data * out.grad
@@ -190,7 +189,7 @@ end
 # Power #
 #########
 function ^(a::Value, b::Number)
-  out = newValue(a.data^b, "^"*b, [a])
+  out = newValue(a.data^b, [a]; name = "^"*b)
   out._backward = function()
     a.grad += b * a.data^(b - 1) * out.grad
   end
@@ -218,7 +217,7 @@ end
 # ReLU #
 ########
 function relu(a::Value)
-  out = newValue(max(0, a.data), "ReLU", [a])
+  out = newValue(max(0, a.data), [a]; name = "ReLU")
   out._backward = function()
     a.grad += b * (a.data <= 0 ? 0 : 1) * out.grad
   end
@@ -229,3 +228,11 @@ function relu(a::Number)
   relu(newValue(a))
 end
 
+
+#########
+# Tests #
+#########
+
+# @nv v1 1; @nv v2 2; @nv v3 3; soma = v1 + v2 + v3; backward(soma); print(soma)
+
+# @nv v1 1; @nv v2 2; @nv v3 3; e = v1 + v2 * v3; backward(e); print(e)
