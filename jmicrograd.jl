@@ -1,7 +1,13 @@
+module Jmicrograd
+export Value, newValue, print, clear_grads!, backward, relu
+export @nv
+export build_dot
+
 import Base.:*
 import Base.:+
 import Base.:-
 import Base.:/
+import Base.:^
 import Base.print
 
 using GraphvizDotLang: digraph, edge, node, save, attr
@@ -103,6 +109,52 @@ function build_topo(v::Value)
 end
 
 
+#########################
+# Build graph using dot #
+#########################
+# Traverse the list once, generating the nodes
+# Traverse it again, generating edges
+# Return digraph object
+function build_dot(v::Value)
+  
+  # Build list of nodes
+  global topo = []
+  global visited = Set()
+  build_topo(v)
+  # reverse!(topo)
+  
+  # Create dictionary: node => index in the list
+  d = IdDict([(node, i) for (node, i) = zip(topo, 1:length(topo))])
+
+  # Initialize graph
+  g = digraph() |> attr(:node, shape = "record")
+
+  # Enter nodes in the graph
+  for this_node in topo
+    this_id   = d[this_node]
+    this_name = this_node.name
+    this_data = this_node.data
+    this_grad = this_node.grad
+    g = g |> node(
+      "node$this_id",
+      label = "{ $this_name | data: $this_data | grad: $this_grad }"
+    )
+  end
+
+  # Enter edges in the graph
+  for this_node in topo
+    this_id   = d[this_node]
+    for child in this_node.prev
+      child_id = d[child]
+      g = g |> edge("node$this_id", "node$child_id")
+    end
+  end
+
+  g
+
+end
+
+
 ####################################
 # Backward pass starting at node v #
 ####################################
@@ -189,7 +241,7 @@ end
 # Power #
 #########
 function ^(a::Value, b::Number)
-  out = newValue(a.data^b, [a]; name = "^"*b)
+  out = newValue(a.data^b, [a]; name = "^$b")
   out._backward = function()
     a.grad += b * a.data^(b - 1) * out.grad
   end
@@ -219,7 +271,7 @@ end
 function relu(a::Value)
   out = newValue(max(0, a.data), [a]; name = "ReLU")
   out._backward = function()
-    a.grad += b * (a.data <= 0 ? 0 : 1) * out.grad
+    a.grad += (a.data <= 0 ? 0 : 1) * out.grad
   end
   out
 end  
@@ -228,11 +280,5 @@ function relu(a::Number)
   relu(newValue(a))
 end
 
+end # module
 
-#########
-# Tests #
-#########
-
-# @nv v1 1; @nv v2 2; @nv v3 3; soma = v1 + v2 + v3; backward(soma); print(soma)
-
-# @nv v1 1; @nv v2 2; @nv v3 3; e = v1 + v2 * v3; backward(e); print(e)
