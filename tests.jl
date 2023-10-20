@@ -43,7 +43,7 @@ print(e)
 #############
 # DOT graph #
 #############
-g = build_dot(e)
+g = build_dot(e, "ReLU(v1 + v2 * v3)")
 println("\nDOT graph:\n")
 println(g)
 GraphvizDotLang.save(g, "example1.png", format = "png")

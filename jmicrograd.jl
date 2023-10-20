@@ -115,19 +115,26 @@ end
 # Traverse the list once, generating the nodes
 # Traverse it again, generating edges
 # Return digraph object
-function build_dot(v::Value)
+function build_dot(v::Value, title::String = "")
   
   # Build list of nodes
   global topo = []
   global visited = Set()
   build_topo(v)
-  # reverse!(topo)
   
   # Create dictionary: node => index in the list
   d = IdDict([(node, i) for (node, i) = zip(topo, 1:length(topo))])
 
+  # Pad label
+  if title != ""
+    title *= "\n\n"
+  end
+  
   # Initialize graph
-  g = digraph() |> attr(:node, shape = "record")
+  g = digraph() |>
+    attr(:node, shape = "record") |>
+    attr(:graph, label = title) |>
+    attr(:graph, labelloc = "t")
 
   # Enter nodes in the graph
   for this_node in topo
