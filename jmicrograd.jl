@@ -8,9 +8,14 @@ import Base.:+
 import Base.:-
 import Base.:/
 import Base.:^
+import Base.:exp
+import Base.:inv
+import Base.:literal_pow
 import Base.print
 
-using GraphvizDotLang: digraph, edge, node, save, attr
+using GraphvizDotLang: digraph, edge, node, save, attr, HTML
+using Printf: @sprintf
+
 
 #########
 # Class #
@@ -115,7 +120,16 @@ end
 # Traverse the list once, generating the nodes
 # Traverse it again, generating edges
 # Return digraph object
-function build_dot(v::Value, title::String = "")
+function build_dot(
+  v::Value,
+  title::String = "";
+  rankdir = "LR",
+  ranksep = 1,
+  nodesep = 0.5,
+  fontsize = 24,
+  dpi = 150,
+  digits = 3
+)
   
   # Build list of nodes
   global topo = []
@@ -132,19 +146,33 @@ function build_dot(v::Value, title::String = "")
   
   # Initialize graph
   g = digraph() |>
-    attr(:node, shape = "record") |>
+    attr(:graph, rankdir = rankdir) |>
+    attr(:graph, ranksep = string(ranksep)) |>
+    attr(:graph, nodesep = string(nodesep)) |>
+    attr(:graph, fontsize = string(fontsize)) |>
+    attr(:graph, dpi = string(dpi)) |>
     attr(:graph, label = title) |>
-    attr(:graph, labelloc = "t")
+    attr(:graph, labelloc = "t") |>
+    attr(:node, shape = "none") |>
+    attr(:node, margin = "0") |>
+    attr(:node, fixedsize = "false")
 
   # Enter nodes in the graph
   for this_node in topo
     this_id   = d[this_node]
     this_name = this_node.name
-    this_data = this_node.data
-    this_grad = this_node.grad
+    this_data = round(this_node.data, digits = digits)
+    this_grad = round(this_node.grad, digits = digits)
     g = g |> node(
       "node$this_id",
-      label = "{ $this_name | data: $this_data | grad: $this_grad }"
+      label = HTML(
+        @sprintf "
+        <table cellborder=\"1\" border=\"0\" cellspacing=\"0\" cellpadding=\"5\">
+        <tr><td bgcolor=\"gray\"><b>%s</b></td></tr>
+        <tr><td align=\"right\"><font color=\"blue\">%s »</font></td></tr>
+        <tr><td align=\"left\"><font color=\"red\">« %s</font></td></tr>
+        </table>" this_name this_data this_grad
+      )
     )
   end
 
@@ -153,7 +181,7 @@ function build_dot(v::Value, title::String = "")
     this_id   = d[this_node]
     for child in this_node.prev
       child_id = d[child]
-      g = g |> edge("node$this_id", "node$child_id")
+      g = g |> edge("node$child_id", "node$this_id")
     end
   end
 
@@ -191,11 +219,11 @@ function +(a::Value, b::Value)
 end
 
 function +(a::Value, b::Number)
-  a + newValue(b)
+  a + newValue(b, name = string(b))
 end
 
 function +(a::Number, b::Value)
-  newValue(a) + b
+  newValue(a, name = string(a)) + b
 end
 
 
@@ -212,11 +240,11 @@ function *(a::Value, b::Value)
 end
 
 function *(a::Value, b::Number)
-  a * newValue(b)
+  a * newValue(b, name = string(b))
 end
 
 function +(a::Number, b::Value)
-  newValue(a) * b
+  newValue(a, name = string(a)) * b
 end
 
 
@@ -228,11 +256,11 @@ function -(a::Value, b::Value)
 end
 
 function -(a::Value, b::Number)
-  a - newValue(b)
+  a - newValue(b, name = string(b))
 end
 
 function -(a::Number, b::Value)
-  newValue(a) - b
+  newValue(a, name = string(a)) - b
 end
 
 
@@ -247,6 +275,16 @@ end
 #########
 # Power #
 #########
+# From the docs:
+#
+# If y is an Int literal (e.g. 2 in x^2 or -3 in x^-3), the Julia code
+# x^y is transformed by the compiler to Base.literal_pow(^, x,
+# Val(y)), to enable compile-time specialization on the value of the
+# expo- nent. (As a default fallback we have Base.literal_pow(^, x,
+# Val(y)) = ^(x,y), where usually ^ == Base.^ unless ^ has been
+# defined in the calling namespace.) If y is a negative integer
+# literal, then Base.literal_pow transforms the operation to inv(x)^-y
+# by default, where -y is positive.
 function ^(a::Value, b::Number)
   out = newValue(a.data^b, [a]; name = "^$b")
   out._backward = function()
@@ -256,19 +294,31 @@ function ^(a::Value, b::Number)
 end
 
 
+#######
+# inv #
+#######
+function inv(a::Value)
+  out = newValue(1/(a.data), [a]; name = "1/x")
+  out._backward = function()
+    a.grad += -1/(a.data^2) * out.grad
+  end
+  out
+end
+
+
 ############
 # Division #
 ############
 function /(a::Value, b::Value)
-  a * b^1
+  a * b^-1
 end
 
 function /(a::Value, b::Number)
-  a / newValue(b)
+  a / newValue(b, name = string(b))
 end
 
 function /(a::Number, b::Value)
-  newValue(a) / b
+  newValue(a, name = string(a)) / b
 end
 
 
@@ -284,8 +334,21 @@ function relu(a::Value)
 end  
 
 function relu(a::Number)
-  relu(newValue(a))
+  relu(newValue(a, name = string(a)))
 end
+
+
+#######
+# exp #
+#######
+function exp(a::Value)
+  out = newValue(exp(a.data), [a]; name = "exp")
+  out._backward = function()
+    a.grad += out.data * out.grad
+  end
+  out
+end
+
 
 end # module
 

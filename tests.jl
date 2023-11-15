@@ -73,3 +73,18 @@ GraphvizDotLang.save(g, "example3.png", format = "png")
 println("Saved to example3.png")
 
 
+######################
+# DOT graph: sigmoid #
+######################
+@nv w0 2
+@nv x0 -1
+@nv w1 -3
+@nv x1 -2
+@nv w2 -3
+e = (exp((w0 * x0 + w1 * x1 + w2) * -1) + 1)^-1
+backward(e)
+g = build_dot(e)
+println("\nDOT graph:\n")
+println(g)
+GraphvizDotLang.save(g, "example4.png", format = "png")
+println("Saved to example4.png")
