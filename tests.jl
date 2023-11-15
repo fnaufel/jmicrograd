@@ -1,8 +1,7 @@
-module TestJmicrograd
-
 include("jmicrograd.jl")
 using .Jmicrograd
 using GraphvizDotLang
+
 
 #######################################
 # Addition with 3 values and backward #
@@ -73,6 +72,4 @@ println(g)
 GraphvizDotLang.save(g, "example3.png", format = "png")
 println("Saved to example3.png")
 
-
-end # module
 

@@ -1,0 +1,85 @@
+digraph {
+
+  rankdir="LR";
+  label="ReLU(v1 + v2 * v3)
+
+";
+  labelloc="t";
+  ranksep=1;
+  nodesep=0.5;
+  fontsize=24;
+  dpi=150;
+
+  node[
+    shape="none"
+    margin="0"
+    fixedsize="false"
+  ];
+  
+  "node1"[
+    label=<
+      <table cellborder="1" border="0" cellspacing="0" cellpadding="5">
+      <tr><td bgcolor="gray"><b>v1</b></td></tr>
+      <tr><td align="right"><font color="blue">1.0000 »</font></td></tr>
+      <tr><td align="right"><font color="red">1.0000 «</font></td></tr>
+      </table>
+    >
+  ];
+
+  "node2"[
+    label=<
+      <table cellborder="1" border="0" cellspacing="0" cellpadding="5">
+      <tr><td bgcolor="gray"><b>v2</b></td></tr>
+      <tr><td align="right"><font color="blue">2.0000 »</font></td></tr>
+      <tr><td align="right"><font color="red">3.0000 «</font></td></tr>
+      </table>
+    >
+  ];
+
+  "node3"[
+    label=<
+      <table cellborder="1" border="0" cellspacing="0" cellpadding="5">
+      <tr><td bgcolor="gray"><b>v3</b></td></tr>
+      <tr><td align="right"><font color="blue">3.0000 »</font></td></tr>
+      <tr><td align="right"><font color="red">2.0000 «</font></td></tr>
+      </table>
+    >
+  ];
+
+  "node4"[
+    label=<
+      <table cellborder="1" border="0" cellspacing="0" cellpadding="5">
+      <tr><td bgcolor="gray"><b>*</b></td></tr>
+      <tr><td align="right"><font color="blue">6.0000 »</font></td></tr>
+      <tr><td align="right"><font color="red">1.0000 «</font></td></tr>
+      </table>
+    >
+  ];
+
+  "node5"[
+    label=<
+      <table cellborder="1" border="0" cellspacing="0" cellpadding="5">
+      <tr><td bgcolor="gray"><b>+</b></td></tr>
+      <tr><td align="right"><font color="blue">7.0000 »</font></td></tr>
+      <tr><td align="right"><font color="red">1.0000 «</font></td></tr>
+      </table>
+    >
+  ];
+  
+  "node6"[
+    label=<
+      <table cellborder="1" border="0" cellspacing="0" cellpadding="5">
+      <tr><td bgcolor="gray"><b>ReLU</b></td></tr>
+      <tr><td align="right"><font color="blue">7.0000 »</font></td></tr>
+      <tr><td align="right"><font color="red">1.0000 «</font></td></tr>
+      </table>
+    >
+  ];
+
+  "node2"->"node4";
+  "node3"->"node4";
+  "node1"->"node5";
+  "node4"->"node5";
+  "node5"->"node6";
+}
+
